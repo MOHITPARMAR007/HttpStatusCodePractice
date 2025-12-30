@@ -4,18 +4,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
 
 type User struct {
+	Id      int    `json:"Id`
 	Name    string `json:"name"`
 	Company string `json:"company"`
 	City    string `json:"city"`
 }
 
 var users = []User{
-	{Name: "mohit", Company: "google", City: "Indore"},
+	{Id: 1, Name: "mohit", Company: "google", City: "Indore"},
 }
 
 func main() {
@@ -23,6 +25,7 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/getUsers", getUsers).Methods(http.MethodGet)
 	router.HandleFunc("/createUser", createUser).Methods(http.MethodPost)
+	router.HandleFunc("/getUser/{id}", getUserById).Methods(http.MethodGet)
 	fmt.Println("Server running on :8080")
 	http.ListenAndServe(":8080", router)
 }
@@ -61,4 +64,27 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 	users = append(users, user)
 	w.WriteHeader(http.StatusCreated) // 201
 	json.NewEncoder(w).Encode(user)
+}
+func getUserById(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// url se id ninkali apan ne ider
+	idStr := mux.Vars(r)["id"]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, `{"error":"Invalid ID"}`, http.StatusBadRequest)
+		return
+	}
+
+	// loop lagaya h har ek user k liye
+	for _, user := range users {
+		if user.Id == id {
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(user)
+			return // match milte hi exit
+		}
+	}
+
+	// User not found
+	http.Error(w, `{"error":"User not found"}`, http.StatusNotFound)
 }
