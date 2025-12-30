@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -26,6 +27,7 @@ func main() {
 	router.HandleFunc("/getUsers", getUsers).Methods(http.MethodGet)
 	router.HandleFunc("/createUser", createUser).Methods(http.MethodPost)
 	router.HandleFunc("/getUser/{id}", getUserById).Methods(http.MethodGet)
+	router.HandleFunc("/getTime", getTime).Methods(http.MethodGet)
 	fmt.Println("Server running on :8080")
 	http.ListenAndServe(":8080", router)
 }
@@ -87,4 +89,34 @@ func getUserById(w http.ResponseWriter, r *http.Request) {
 
 	// User not found
 	http.Error(w, `{"error":"User not found"}`, http.StatusNotFound)
+}
+
+func getTime(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// query param "tz" se timezone le lo
+	tz := r.URL.Query().Get("tz")
+	if tz == "" {
+		http.Error(w, `{"error":"tz query param required"}`, http.StatusBadRequest)
+		return
+	}
+
+	// time.LoadLocation se timezone load karo
+	// time.LoadLocation go me inbuild module h time k liye
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		http.Error(w, fmt.Sprintf(`{"error":"invalid timezone %s"}`, tz), http.StatusNotFound)
+		return
+	}
+
+	// current time us timezone ke hisaab se
+	currentTime := time.Now().In(loc)
+
+	// JSON response
+	// response ko aapne hisab se edit kiya h
+	resp := map[string]string{
+		"timezone": tz,
+		"time":     currentTime.Format(time.RFC3339), // ISO format
+	}
+	json.NewEncoder(w).Encode(resp)
 }
